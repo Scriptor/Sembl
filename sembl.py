@@ -1,6 +1,10 @@
 import re
 strings = []
 
+words = {
+	'+': (plus)
+}
+
 def lex(code):
 	class Counter():
 		def __init__(self, s):
@@ -18,9 +22,12 @@ def lex(code):
 	code = re.sub(r'"(?:[^"\\]|\\.)*"', Counter("%s __string__"), code)
 	return code.split(' ')
 	
+def compile(toks):
+	bytecode = []
+	for x in toks:
+		bytecode.append(x)
+	
 code = """
 	3 4 +
-	"hello"
-	"world"
 """
 print lex(code)
