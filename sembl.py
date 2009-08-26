@@ -1,10 +1,6 @@
 import re
 strings = []
 
-words = {
-	'+': (plus)
-}
-
 def lex(code):
 	class Counter():
 		def __init__(self, s):
