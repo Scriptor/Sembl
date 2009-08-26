@@ -1,5 +1,13 @@
 import re
+from sembltypes import typeof, typify
+
 strings = []
+
+plus = lambda stack: stack.pop() + stack.pop()
+
+words = {
+	'+': plus
+}
 
 def lex(code):
 	class Counter():
@@ -20,10 +28,21 @@ def lex(code):
 	
 def compile(toks):
 	bytecode = []
-	for x in toks:
-		bytecode.append(x)
+	for tok in toks:
+		bytecode.append(typify(tok))
+	return bytecode
 	
+def execute(bytecode):
+	stack = []
+	for term in bytecode:
+		if words.has_key(term):
+			stack.append(words[term](stack))
+		else:
+			stack.append(term)
+	return stack
+
 code = """
 	3 4 +
 """
-print lex(code)
+toks = lex(code)
+print execute(compile(toks))

@@ -2,7 +2,7 @@ import re
 pats = {
 	'int': r"^[-+]?[0-9]+$",
 	'float': r"^[-+]?[0-9]*\.?[0-9]+$",
-	'word': r'^[^"].+[^"]$'
+	'word': r'^.+$'
 }
 
 def number(tok):
