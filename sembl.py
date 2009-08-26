@@ -4,9 +4,14 @@ from sembltypes import typeof, typify
 strings = []
 
 plus = lambda stack: stack.pop() + stack.pop()
-
+minus = lambda stack: -stack.pop() + stack.pop()
+mul = lambda stack: stack.pop() * stack.pop()
+div = lambda stack: stack.pop(1) / stack.pop()
 words = {
-	'+': plus
+	'+': plus,
+	'-': minus,
+	'*': mul,
+	'/': div
 }
 
 def lex(code):
@@ -42,7 +47,7 @@ def execute(bytecode):
 	return stack
 
 code = """
-	3 4 +
+	3 4 /
 """
 toks = lex(code)
 print execute(compile(toks))
