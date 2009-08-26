@@ -6,9 +6,7 @@ pats = {
 }
 
 def number(tok):
-	if re.match(pats['int'], tok):
-		return int(tok)
-	elif re.match(pats['float'], tok):
+	if re.match(pats['float'], tok):
 		return float(tok)
 	else:
 		return False
