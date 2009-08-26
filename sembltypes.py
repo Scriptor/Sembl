@@ -20,9 +20,13 @@ def word(tok):
 
 type_funcs = (
 	('number', number),
-	('string', string),
-	('name', name)
+	('word', word)
 )
+
+def typify(tok):
+	for name, func in type_funcs:
+		if func(tok) is not False:
+			return func(tok)
 
 def typeof(tok):
 	for name, func in type_funcs:
