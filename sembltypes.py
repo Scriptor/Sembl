@@ -12,7 +12,7 @@ def number(tok):
 	return False
 
 def block(tok):
-	if re.match(pats['block'], tok)
+	if re.match(pats['block'], tok):
 		return tok
 	return False
 	

@@ -58,7 +58,7 @@ class Block(object):
 	
 	def extend(self,toks):
 		self.bytecode.extend(toks)
-		
+	
 	def __str__(self):
 		return repr(self.bytecode)
 
@@ -108,9 +108,14 @@ def compile(toks):
 	typecode = []
 	
 	for tok in toks:
-		if hooks.has_key(tok):
+		if tok == '{':
 			saved_bytecodes.append(bytecode)
-			bytecode = hooks[tok](saved_bytecodes, typecode)
+			bytecode = Block()
+		elif tok == '}':
+			blocks[bytecode.id] = bytecode
+			saved_bytecodes[-1].append(bytecode.id)
+			bytecode = saved_bytecodes.pop()
+			typecode.append('block')
 		else:
 			if isinstance(bytecode, list):
 				typecheck(tok, typecode)
@@ -126,8 +131,7 @@ def execute(bytecode, stack=[]):
 	return stack
 
 code = """
-	2 3 +
-	{ 2 } do
+2 { 45 { 3 } } do do
 """
 toks = lex(code)
 try:
