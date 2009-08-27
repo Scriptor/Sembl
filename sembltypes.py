@@ -16,8 +16,14 @@ def word(tok):
 		return tok
 	return False
 
+def null(tok):
+	if tok == "null":
+		return tok
+	return False
+
 type_funcs = (
 	('number', number),
+	('null', null),
 	('word', word)
 )
 
