@@ -3,17 +3,64 @@ from sembltypes import typeof, typify
 
 strings = []
 
-plus = lambda stack: stack.pop() + stack.pop()
-minus = lambda stack: -stack.pop() + stack.pop()
-mul = lambda stack: stack.pop() * stack.pop()
-div = lambda stack: stack.pop(1) / stack.pop()
+plus = lambda stack: stack.append(stack.pop() + stack.pop())
+minus = lambda stack: stack.append(-stack.pop() + stack.pop())
+mul = lambda stack: stack.append(stack.pop() * stack.pop())
+div = lambda stack: stack.append(stack.pop(1) / stack.pop())
 
+def do(stack):
+	blocks[stack.pop()](stack)
+	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
 	'-': (minus, ('number', 'number'), ('number',)),
 	'*': (mul, ('number', 'number'), ('number',)),
 	'/': (div, ('number', 'number'), ('number',)),
+	'do': (do, ('block',), ())
 }
+
+blocks = {}
+
+def block_start(saved_bytecodes, typecode):
+	return Block()
+	
+def block_end(saved_bytecodes, typecode):
+	block = saved_bytecodes.pop()
+	blocks[block.id] = block
+	saved_bytecodes[-1].append(block.id)
+	typecode.append('block')
+	return saved_bytecodes[-1]
+	
+hooks = {
+	'{': block_start,
+	'}': block_end,
+}
+
+class Block(object):
+	pointers = {}
+	cur_id = -1
+	
+	@classmethod
+	def next_id(cls):
+		cls.cur_id += 1
+		return cls.cur_id
+	
+	def __init__(self, parent=None):
+		self.parent = parent
+		self.bytecode = []
+		self.id = "__block%s__" % Block.next_id()
+	
+	def __call__(self, stack):
+		execute(self.bytecode, stack)
+		
+	def append(self,tok):
+		self.bytecode.append(tok)
+	
+	def extend(self,toks):
+		self.bytecode.extend(toks)
+		
+	def __str__(self):
+		return repr(self.bytecode)
 
 class CompileError(Exception):
 	def __init__(self, msg):
@@ -56,26 +103,31 @@ def lex(code):
 	return code.split(' ')
 	
 def compile(toks):
+	saved_bytecodes = []
 	bytecode = []
 	typecode = []
 	
 	for tok in toks:
-		typecheck(tok, typecode)
-		bytecode.append(typify(tok))
+		if hooks.has_key(tok):
+			saved_bytecodes.append(bytecode)
+			bytecode = hooks[tok](saved_bytecodes, typecode)
+		else:
+			if isinstance(bytecode, list):
+				typecheck(tok, typecode)
+			bytecode.append(typify(tok))
 	return bytecode
 	
-def execute(bytecode):
-	stack = []
+def execute(bytecode, stack=[]):
 	for term in bytecode:
 		if words.has_key(term):
-			stack.append(words[term][0](stack))
+			words[term][0](stack)
 		else:
 			stack.append(term)
 	return stack
 
 code = """
 	2 3 +
-	3 *
+	{ 2 } do
 """
 toks = lex(code)
 try:
@@ -83,4 +135,4 @@ try:
 except CompileError as err:
 	print "   Compile error:\n\t %s\n" % err
 else:
-	print execute(compile(toks))
+	print execute(bytecode)
