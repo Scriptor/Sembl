@@ -72,12 +72,12 @@ def typecheck(tok, typecode):
 	if words.has_key(tok):
 		inputs = words[tok][1]
 		products = words[tok][2]
+		
+		if len(inputs) > len(typecode):
+			raise CompileError("%s tok expects %s items on stack, %s given" % (tok, len(inputs), len(typecode)))
 		for i,expected_typ in enumerate(reversed(inputs)):
-			if not len(typecode):
-				typecode.append("null")
-
 			if expected_typ != typecode[-1]:
-				raise CompileError("Expecting %s, got %s" % (expected_typ, typecode[-1]))
+				raise CompileError("%s expects %s for argument %s, got %s" % (tok, expected_typ, i, typecode[-1]))
 			else:
 				typecode.pop()
 		typecode.extend(products)
@@ -131,7 +131,7 @@ def execute(bytecode, stack=[]):
 	return stack
 
 code = """
-2 { 45 { 3 } } do do
+abc def +
 """
 toks = lex(code)
 try:
