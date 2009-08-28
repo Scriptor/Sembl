@@ -7,6 +7,7 @@ plus = lambda stack: stack.append(stack.pop() + stack.pop())
 minus = lambda stack: stack.append(-stack.pop() + stack.pop())
 mul = lambda stack: stack.append(stack.pop() * stack.pop())
 div = lambda stack: stack.append(stack.pop(1) / stack.pop())
+dup = lambda stack: stack.append(stack[-1])
 
 def do(stack):
 	blocks[stack.pop()](stack)
@@ -16,7 +17,8 @@ words = {
 	'-': (minus, ('number', 'number'), ('number',)),
 	'*': (mul, ('number', 'number'), ('number',)),
 	'/': (div, ('number', 'number'), ('number',)),
-	'do': (do, ('block',), ())
+	'do': (do, ('block',), ()),
+	'dup': (dup, ('x',), ('x', 'x'))
 }
 
 blocks = {}
@@ -68,6 +70,17 @@ class CompileError(Exception):
 	def __str__(self):
 		return self.msg
 	
+def match_types(expected_types, given_types, tok="block"):
+	type_vars = {}
+	for i, expected in enumerate(reversed(expected_types)):
+		given = given_types.pop()
+		if expected != given:
+			if expected not in types:
+				if not type_vars.has_key(expected) or type_vars[expected] == given:
+					type_vars[expected] = given
+					continue
+			raise CompileError("%s expects a %s for input %s, got %s" % (tok, expected, i, given))
+	
 def typecheck(tok, typecode):
 	if words.has_key(tok):
 		inputs = words[tok][1]
@@ -75,11 +88,8 @@ def typecheck(tok, typecode):
 		
 		if len(inputs) > len(typecode):
 			raise CompileError("%s tok expects %s items on stack, %s given" % (tok, len(inputs), len(typecode)))
-		for i,expected_typ in enumerate(reversed(inputs)):
-			if expected_typ != typecode[-1]:
-				raise CompileError("%s expects %s for argument %s, got %s" % (tok, expected_typ, i, typecode[-1]))
-			else:
-				typecode.pop()
+	
+		match_types(inputs, typecode, tok)
 		typecode.extend(products)
 			
 	else:
@@ -131,7 +141,7 @@ def execute(bytecode, stack=[]):
 	return stack
 
 code = """
-abc def +
+10 { dup * } do
 """
 toks = lex(code)
 try:

@@ -33,6 +33,8 @@ type_funcs = (
 	('word', word)
 )
 
+types = [x[0] for x in type_funcs]
+
 def typify(tok):
 	for name, func in type_funcs:
 		if func(tok) is not False:
