@@ -7,12 +7,12 @@ pats = {
 }
 
 def number(tok):
-	if re.match(pats['float'], tok):
+	if isinstance(tok, float) or re.match(pats['float'], tok):
 		return float(tok)
 	return False
 
 def block(tok):
-	if re.match(pats['block'], tok):
+	if type(tok) == str and re.match(pats['block'], tok):
 		return tok
 	return False
 	
@@ -35,6 +35,9 @@ type_funcs = (
 
 types = [x[0] for x in type_funcs]
 
+def isliteral(tok):
+	return not block(tok) and not word(tok)
+	
 def typify(tok):
 	for name, func in type_funcs:
 		if func(tok) is not False:

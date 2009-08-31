@@ -1,5 +1,5 @@
 import re
-from sembltypes import typeof, typify
+from sembltypes import types, typeof, typify, isliteral, block
 
 strings = []
 
@@ -10,7 +10,7 @@ div = lambda stack: stack.append(stack.pop(1) / stack.pop())
 dup = lambda stack: stack.append(stack[-1])
 
 def do(stack):
-	blocks[stack.pop()](stack)
+	blocks[stack.pop()][0](stack)
 	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
@@ -22,21 +22,6 @@ words = {
 }
 
 blocks = {}
-
-def block_start(saved_bytecodes, typecode):
-	return Block()
-	
-def block_end(saved_bytecodes, typecode):
-	block = saved_bytecodes.pop()
-	blocks[block.id] = block
-	saved_bytecodes[-1].append(block.id)
-	typecode.append('block')
-	return saved_bytecodes[-1]
-	
-hooks = {
-	'{': block_start,
-	'}': block_end,
-}
 
 class Block(object):
 	pointers = {}
@@ -73,18 +58,41 @@ class CompileError(Exception):
 def match_types(expected_types, given_types, tok="block"):
 	type_vars = {}
 	for i, expected in enumerate(reversed(expected_types)):
+		if len(given_types) == 0:
+			break
+		expected_types.pop()
 		given = given_types.pop()
 		if expected != given:
 			if expected not in types:
 				if not type_vars.has_key(expected) or type_vars[expected] == given:
 					type_vars[expected] = given
 					continue
+			if given not in types:
+				if not type_vars.has_key(given) or type_vars[given] == expected:
+					type_vars[given] = expected
+					continue
 			raise CompileError("%s expects a %s for input %s, got %s" % (tok, expected, i, given))
+	return expected_types, given_types
+
+def infer(bytecode):
+	inputs = []
+	surplus = []
+	
+	for tok in bytecode:
+		if words.has_key(tok):
+			decl = words[tok][1:]
+		elif block(tok):
+			decl = blocks[block][1:]
+		else:
+			decl = [[], [typeof(tok),]]
+		inputs.extend((match_types(list(decl[0]), surplus, tok))[0])
+		surplus.extend(decl[1])
+	return (tuple(inputs), tuple(surplus))
 	
 def typecheck(tok, typecode):
 	if words.has_key(tok):
-		inputs = words[tok][1]
-		products = words[tok][2]
+		inputs = list(words[tok][1])
+		products = list(words[tok][2])
 		
 		if len(inputs) > len(typecode):
 			raise CompileError("%s tok expects %s items on stack, %s given" % (tok, len(inputs), len(typecode)))
@@ -122,7 +130,8 @@ def compile(toks):
 			saved_bytecodes.append(bytecode)
 			bytecode = Block()
 		elif tok == '}':
-			blocks[bytecode.id] = bytecode
+			blocks[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
+			print infer(bytecode.bytecode)
 			saved_bytecodes[-1].append(bytecode.id)
 			bytecode = saved_bytecodes.pop()
 			typecode.append('block')
@@ -140,13 +149,14 @@ def execute(bytecode, stack=[]):
 			stack.append(term)
 	return stack
 
-code = """
-10 { dup * } do
-"""
-toks = lex(code)
-try:
-	bytecode = compile(toks)
-except CompileError as err:
-	print "   Compile error:\n\t %s\n" % err
-else:
-	print execute(bytecode)
+if __name__ == "__main__":
+	code = """
+	abc { dup * } do
+	"""
+	toks = lex(code)
+	try:
+		bytecode = compile(toks)
+	except CompileError as err:
+		print "   Compile error:\n\t %s\n" % err
+	else:
+		print execute(bytecode)
