@@ -1,4 +1,5 @@
 import re
+import pdb
 from sembltypes import types, typeof, typify, isliteral, block
 
 strings = []
@@ -12,13 +13,23 @@ dup = lambda stack: stack.append(stack[-1])
 def do(stack):
 	blocks[stack.pop()][0](stack)
 	
+def string(stack):
+	s = strings[int(stack.pop())]
+	stack.append(s)
+	
+def define(stack):
+	block, name = stack.pop(), stack.pop()
+	words[name] = words[block]
+	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
 	'-': (minus, ('number', 'number'), ('number',)),
 	'*': (mul, ('number', 'number'), ('number',)),
 	'/': (div, ('number', 'number'), ('number',)),
 	'do': (do, ('block',), ()),
-	'dup': (dup, ('x',), ('x', 'x'))
+	'dup': (dup, ('x',), ('x', 'x')),
+	'__string__': (string, ('number',), ('string',)),
+	'def': (define, ('string', 'block'), ('block'))
 }
 
 blocks = {}
@@ -54,6 +65,14 @@ class CompileError(Exception):
 		self.msg = msg
 	def __str__(self):
 		return self.msg
+
+def replace(type_vars, xs):
+	for i,x in enumerate(xs):
+		for var in type_vars:
+			if x == var:				
+				typ = type_vars[var]
+				xs[i] = typ
+	return xs	
 	
 def match_types(expected_types, given_types, tok="block"):
 	type_vars = {}
@@ -72,11 +91,13 @@ def match_types(expected_types, given_types, tok="block"):
 					type_vars[given] = expected
 					continue
 			raise CompileError("%s expects a %s for input %s, got %s" % (tok, expected, i, given))
-	return expected_types, given_types
+	
+	return expected_types, given_types, type_vars
 
 def infer(bytecode):
 	inputs = []
 	surplus = []
+	type_vars = {}
 	
 	for tok in bytecode:
 		if words.has_key(tok):
@@ -85,8 +106,11 @@ def infer(bytecode):
 			decl = blocks[block][1:]
 		else:
 			decl = [[], [typeof(tok),]]
-		inputs.extend((match_types(list(decl[0]), surplus, tok))[0])
+		new_inputs, _, type_vars = match_types(list(decl[0]), surplus, tok)
+		inputs.extend(new_inputs)
 		surplus.extend(decl[1])
+		inputs = replace(type_vars, inputs)
+		surplus = replace(type_vars, surplus)
 	return (tuple(inputs), tuple(surplus))
 	
 def typecheck(tok, typecode):
@@ -115,7 +139,8 @@ def lex(code):
 
 	global strings
 	string = re.compile(r'"(?:[^"\\]|\\.)*"')
-	strings = string.findall(code)
+	for m in string.finditer(code):
+		strings.append(m.group(0)[1:-1])
 	code = re.sub(r'\s+',' ',code).strip()
 	code = re.sub(r'"(?:[^"\\]|\\.)*"', Counter("%s __string__"), code)
 	return code.split(' ')
@@ -130,12 +155,14 @@ def compile(toks):
 			saved_bytecodes.append(bytecode)
 			bytecode = Block()
 		elif tok == '}':
-			blocks[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
-			print infer(bytecode.bytecode)
+			words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
 			saved_bytecodes[-1].append(bytecode.id)
 			bytecode = saved_bytecodes.pop()
 			typecode.append('block')
 		else:
+			if tok == 'do':
+				typecode.pop()
+				tok = bytecode.pop()
 			if isinstance(bytecode, list):
 				typecheck(tok, typecode)
 			bytecode.append(typify(tok))
@@ -151,7 +178,7 @@ def execute(bytecode, stack=[]):
 
 if __name__ == "__main__":
 	code = """
-	abc { dup * } do
+	2 { dup * }
 	"""
 	toks = lex(code)
 	try:

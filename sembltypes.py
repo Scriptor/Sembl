@@ -26,10 +26,14 @@ def word(tok):
 		return tok
 	return False
 
+def string(tok):
+	return tok
+	
 type_funcs = (
 	('number', number),
 	('block', block),
 	('null', null),
+	('string', string),
 	('word', word)
 )
 
