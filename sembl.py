@@ -22,8 +22,11 @@ def define(stack):
 	pass
 	
 def se(stack):
-	inputs, products = [x.strip() for x in stack.pop().split('->')]
-	print inputs, products
+	inputs, products = [tuple(x.strip().split(' ')) for x in stack.pop().split('->')]
+	block = stack[-1]
+	decl = words[block.id][1:]
+	if (inputs, products) != decl:
+		raise ExeError("Given stack effect of %s -> %s does not match actual effect of %s" % (inputs, products, decl))
 	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
@@ -67,6 +70,12 @@ class Block(object):
 		return repr(self.bytecode)
 
 class CompileError(Exception):
+	def __init__(self, msg):
+		self.msg = msg
+	def __str__(self):
+		return self.msg
+
+class ExeError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 	def __str__(self):
@@ -189,10 +198,11 @@ if __name__ == "__main__":
 	code = """
 	"cubed" { 
 		dup dup * * 
-	} def "number -> number" typ
-	3 cubed
-	4 cubed
-	+
+	} def "number -> number" se
+	
+	"add-dup" {
+		+ dup
+	} def "number number -> number number" se
 	"""
 	toks = lex(code)
 	try:
@@ -200,4 +210,7 @@ if __name__ == "__main__":
 	except CompileError as err:
 		print "   Compile error:\n\t %s\n" % err
 	else:
-		print execute(bytecode)
+		try:
+			print execute(bytecode)
+		except ExeError as err:
+			print "   Runtime error: \n\t %s\n" % err
