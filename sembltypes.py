@@ -1,4 +1,6 @@
 import re
+import pdb
+
 pats = {
 	'int': r"^[-+]?[0-9]+$",
 	'float': r"^[-+]?[0-9]*\.?[0-9]+$",
@@ -12,8 +14,8 @@ def number(tok):
 	return False
 
 def block(tok):
-	if type(tok) == str and re.match(pats['block'], tok):
-		return tok
+	if hasattr(tok, 'block'):
+		return tok.id
 	return False
 	
 def null(tok):
@@ -29,9 +31,9 @@ def word(tok):
 def string(tok):
 	return tok
 	
-type_funcs = (
-	('number', number),
+type_funcs = (	
 	('block', block),
+	('number', number),
 	('null', null),
 	('string', string),
 	('word', word)

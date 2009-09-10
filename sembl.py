@@ -9,9 +9,10 @@ minus = lambda stack: stack.append(-stack.pop() + stack.pop())
 mul = lambda stack: stack.append(stack.pop() * stack.pop())
 div = lambda stack: stack.append(stack.pop(1) / stack.pop())
 dup = lambda stack: stack.append(stack[-1])
-
+		
 def do(stack):
-	blocks[stack.pop()][0](stack)
+	block = stack.pop()
+	block(stack)
 	
 def string(stack):
 	s = strings[int(stack.pop())]
@@ -44,6 +45,7 @@ class Block(object):
 		return cls.cur_id
 	
 	def __init__(self, parent=None):
+		self.block = True
 		self.parent = parent
 		self.bytecode = []
 		self.id = "__block%s__" % Block.next_id()
@@ -156,7 +158,7 @@ def compile(toks):
 			bytecode = Block()
 		elif tok == '}':
 			words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
-			saved_bytecodes[-1].append(bytecode.id)
+			saved_bytecodes[-1].append(bytecode)
 			bytecode = saved_bytecodes.pop()
 			typecode.append('block')
 		else:
@@ -178,7 +180,7 @@ def execute(bytecode, stack=[]):
 
 if __name__ == "__main__":
 	code = """
-	2 { dup * }
+	2 { dup * } do
 	"""
 	toks = lex(code)
 	try:
