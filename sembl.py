@@ -19,8 +19,11 @@ def string(stack):
 	stack.append(s)
 	
 def define(stack):
-	block, name = stack.pop(), stack.pop()
-	words[name] = words[block.id]
+	pass
+	
+def se(stack):
+	inputs, products = [x.strip() for x in stack.pop().split('->')]
+	print inputs, products
 	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
@@ -30,7 +33,8 @@ words = {
 	'do': (do, ('block',), ()),
 	'dup': (dup, ('x',), ('x', 'x')),
 	'__string__': (string, ('number',), ('string',)),
-	'def': (define, ('string', 'block'), ('block'))
+	'def': (define, ('string', 'block'), ('block',)),
+	'se': (se, ('block', 'string'), ('block',))
 }
 
 blocks = {}
@@ -125,7 +129,6 @@ def typecheck(tok, typecode):
 	
 		match_types(inputs, typecode, tok)
 		typecode.extend(products)
-			
 	else:
 		typecode.append(typeof(tok))
 	
@@ -165,6 +168,10 @@ def compile(toks):
 			if tok == 'do':
 				typecode.pop()
 				tok = bytecode.pop()
+			elif tok == 'def':
+				name = strings[int(bytecode[-3])]
+				block = bytecode[-1]
+				words[name] = words[block.id]
 			if isinstance(bytecode, list):
 				typecheck(tok, typecode)
 			bytecode.append(typify(tok))
@@ -180,9 +187,12 @@ def execute(bytecode, stack=[]):
 
 if __name__ == "__main__":
 	code = """
-	"squared" { dup * } def
-	"cubed" { dup dup * * } def
+	"cubed" { 
+		dup dup * * 
+	} def "number -> number" typ
 	3 cubed
+	4 cubed
+	+
 	"""
 	toks = lex(code)
 	try:
