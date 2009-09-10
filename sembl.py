@@ -20,7 +20,7 @@ def string(stack):
 	
 def define(stack):
 	block, name = stack.pop(), stack.pop()
-	words[name] = words[block]
+	words[name] = words[block.id]
 	
 words = {
 	'+': (plus, ('number', 'number'), ('number',)),
@@ -180,7 +180,9 @@ def execute(bytecode, stack=[]):
 
 if __name__ == "__main__":
 	code = """
-	2 { dup * } do
+	"squared" { dup * } def
+	"cubed" { dup dup * * } def
+	3 cubed
 	"""
 	toks = lex(code)
 	try:
