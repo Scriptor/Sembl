@@ -17,7 +17,7 @@ def block(tok):
 	if hasattr(tok, 'block'):
 		return tok.id
 	return False
-	
+
 def null(tok):
 	if tok == "null":
 		return tok

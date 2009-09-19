@@ -1,0 +1,11 @@
+"cubed" { 
+	dup dup * * 
+} def "number -> number" se
+
+"squared" {
+	dup *
+} def "number -> number" se
+
+"power-of-four" {
+	squared squared
+} def "number -> number" se
