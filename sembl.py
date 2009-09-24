@@ -55,7 +55,7 @@ def se(stack):
 	inputs = unempty(inputs)
 	products = unempty(products)
 	block = stack.pop()
-	decl = vm.words[block.id][1:]
+	decl = tuple(vm.words[block.id][1:])
 	if (inputs, products) != decl:
 		raise ExeError("Given stack effect of %s -> %s does not match actual effect of %s" % (inputs, products, decl))
 
@@ -127,7 +127,7 @@ class Compiler(object):
 				saved_bytecodes.append(bytecode)
 				bytecode = Block()
 			elif tok == '}':
-				self.vm.words[bytecode.id] = (bytecode,)
+				self.vm.words[bytecode.id] = [bytecode]
 				saved_bytecodes[-1].append(bytecode)
 				bytecode = saved_bytecodes.pop()
 			else:
@@ -151,7 +151,7 @@ class Compiler(object):
 		for word in self.vm.words:
 			decl = self.vm.words[word]
 			if len(decl) == 1:
-				self.vm.words[decl[0].id] = decl + infer(decl[0].bytecode, word)
+				self.vm.words[word].extend(infer(decl[0].bytecode, word))
 				
 	def typecheck(self, toks):
 		typecode = []
@@ -308,6 +308,6 @@ if __name__ == "__main__":
 			{ "Not at 1" }
 		if
 	} def "number -> string" se
-	3 stop-at-1
+	1 stop-at-1
 	"""
 	main(code)
