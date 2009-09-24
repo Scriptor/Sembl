@@ -97,34 +97,34 @@ class VirtualMachine(object):
 		code = re.sub(r'"(?:[^"\\]|\\.)*"', self.counter, code)
 		return code.split(' ')
 		
-	def compile(self, toks):
-		saved_bytecodes = []
-		bytecode = []
-		typecode = []
-		
-		for tok in toks:
-			if tok == '{':
-				saved_bytecodes.append(bytecode)
-				bytecode = Block()
-			elif tok == '}':
-				self.words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
-				saved_bytecodes[-1].append(bytecode)
-				bytecode = saved_bytecodes.pop()
-				if isinstance(bytecode, list):
-					typecode.append('block')
-			else:
-				if tok == 'do':
-					typecode.pop()
-					tok = bytecode.pop()
-				elif tok == 'def':
-					name = self.strings[int(bytecode[-3])]
-					block = bytecode[-1]
-					self.words[name] = self.words[block.id]
-
-				if isinstance(bytecode, list):
-					typecheck(tok, typecode)
-				bytecode.append(typify(tok))
-		return bytecode
+	# def compile(self, toks):
+	# 	saved_bytecodes = []
+	# 	bytecode = []
+	# 	typecode = []
+	# 	
+	# 	for tok in toks:
+	# 		if tok == '{':
+	# 			saved_bytecodes.append(bytecode)
+	# 			bytecode = Block()
+	# 		elif tok == '}':
+	# 			self.words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
+	# 			saved_bytecodes[-1].append(bytecode)
+	# 			bytecode = saved_bytecodes.pop()
+	# 			if isinstance(bytecode, list):
+	# 				typecode.append('block')
+	# 		else:
+	# 			if tok == 'do':
+	# 				typecode.pop()
+	# 				tok = bytecode.pop()
+	# 			elif tok == 'def':
+	# 				name = self.strings[int(bytecode[-3])]
+	# 				block = bytecode[-1]
+	# 				self.words[name] = self.words[block.id]
+	# 
+	# 			if isinstance(bytecode, list):
+	# 				typecheck(tok, typecode)
+	# 			bytecode.append(typify(tok))
+	# 	return bytecode
 	
 	def execute(self, bytecode, stack=[]):
 		for term in bytecode:
@@ -136,16 +136,50 @@ class VirtualMachine(object):
 	
 class Compiler(object):
 	
-	def __init__(self, toks):
-		toks = self.blockify(toks)
-		toks = self.defy(toks)
-		toks = self.typecheck(toks)
-		toks = self.typify(toks)
+	def __init__(self, vm, toks):
+		self.vm = vm
+		bc = self.blockify(toks)
+		bc = self.defy(toks)
+		bc = self.typecheck(toks)
+		bc = self.typify(toks)
 		
-	def blockify(toks):
+	def blockify(self, toks):
+		bytecode = []
 		saved_bytecodes = []
 		for tok in toks:
-			if tok == '{'
+			if tok == '{':
+				saved_bytecodes.append(bytecode)
+				bytecode = Block()
+			elif tok == '}':
+				self.vm.words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
+				saved_bytecodes[-1].append(bytecode)
+				bytecode = saved_bytecode.pop()
+			else:
+				bytecode.append(tok)
+		
+		return toks
+	
+	def defy(self, toks):
+		bytecode = []
+		for tok in toks:
+			if tok == 'def':
+				name = self.strings[int(bytecode[-3])] # Fetches number for string index
+				block = bytecode[-1]
+				self.vm.words[name] = block
+			else:
+				bytecode.append(tok)
+		return bytecode
+				
+	def typecheck(self, toks):
+		typecode = []
+		for tok in toks:
+			typecheck(tok, typecode)
+		return toks
+	
+	def typify(self, toks):
+		bytecode = []
+		for tok in toks:
+			bytecode.append(typify(tok))
 	
 class Block(object):
 	pointers = {}
