@@ -139,9 +139,11 @@ class Compiler(object):
 	def __init__(self, vm, toks):
 		self.vm = vm
 		bc = self.blockify(toks)
-		bc = self.defy(toks)
-		bc = self.typecheck(toks)
-		bc = self.typify(toks)
+		bc = self.defy(bc)
+		self.infer()
+		bc = self.typecheck(bc)
+		bc = self.typify(bc)
+		self.bc = bc
 		
 	def blockify(self, toks):
 		bytecode = []
@@ -151,24 +153,31 @@ class Compiler(object):
 				saved_bytecodes.append(bytecode)
 				bytecode = Block()
 			elif tok == '}':
-				self.vm.words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
+				self.vm.words[bytecode.id] = (bytecode,)
 				saved_bytecodes[-1].append(bytecode)
-				bytecode = saved_bytecode.pop()
+				bytecode = saved_bytecodes.pop()
 			else:
 				bytecode.append(tok)
-		
-		return toks
+				
+		return bytecode
 	
 	def defy(self, toks):
 		bytecode = []
 		for tok in toks:
 			if tok == 'def':
-				name = self.strings[int(bytecode[-3])] # Fetches number for string index
+				name = self.vm.strings[int(bytecode[-3])] # Fetches number for string index
 				block = bytecode[-1]
-				self.vm.words[name] = block
+				self.vm.words[name] = self.vm.words[block.id]
 			else:
 				bytecode.append(tok)
+				
 		return bytecode
+	
+	def infer(self):
+		for word in self.vm.words:
+			decl = self.vm.words[word]
+			if len(decl) == 1:
+				self.vm.words[word] = decl + infer(decl[0].bytecode)
 				
 	def typecheck(self, toks):
 		typecode = []
@@ -179,7 +188,11 @@ class Compiler(object):
 	def typify(self, toks):
 		bytecode = []
 		for tok in toks:
-			bytecode.append(typify(tok))
+			if block(tok):
+				bytecode.append(tok)
+			else:
+				bytecode.append(typify(tok))
+		return bytecode
 	
 class Block(object):
 	pointers = {}
@@ -287,7 +300,7 @@ vm = VirtualMachine()
 def main(code, stack=[]):
 	toks = vm.lex(code)
 	try:
-		bytecode = vm.compile(toks)
+		bytecode = Compiler(vm, toks).bc
 	except CompileError as err:
 		print "   Compile error:\n\t %s\n" % err
 	else:
