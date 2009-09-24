@@ -188,10 +188,7 @@ class Compiler(object):
 	def typify(self, toks):
 		bytecode = []
 		for tok in toks:
-			if block(tok):
-				bytecode.append(tok)
-			else:
-				bytecode.append(typify(tok))
+			bytecode.append(typify(tok))
 		return bytecode
 	
 class Block(object):
@@ -213,7 +210,7 @@ class Block(object):
 		vm.execute(self.bytecode, stack)
 		
 	def append(self,tok):
-		self.bytecode.append(tok)
+		self.bytecode.append(typify(tok))
 	
 	def extend(self,toks):
 		self.bytecode.extend(toks)
@@ -276,6 +273,7 @@ def infer(bytecode):
 			decl = ((), ('block',))
 		else:
 			decl = [[], [typeof(tok),]]
+		
 		new_inputs, _, type_vars = match_types(list(decl[0]), surplus, tok)
 		inputs.extend(new_inputs)
 		surplus.extend(decl[1])
@@ -311,10 +309,6 @@ def main(code, stack=[]):
 
 if __name__ == "__main__":
 	code = """
-	"cubed" { 
-		dup dup * * 
-	} def "number -> number" se
-
 	"squared" {
 		dup *
 	} def "number -> number" se
@@ -325,8 +319,9 @@ if __name__ == "__main__":
 	
 	2 power-of-four
 	
-	"stf" {
-		{ "abc" }
+	"equals3" {
+		equals3
 	} def
+	3 equals3
 	"""
 	main(code)
