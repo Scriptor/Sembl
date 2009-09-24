@@ -2,6 +2,7 @@ import re
 import pdb
 import copy
 from sembltypes import types, typeof, typify, isliteral, block
+import pprint
 
 plus = lambda stack: stack.append(stack.pop() + stack.pop())
 minus = lambda stack: stack.append(-stack.pop() + stack.pop())
@@ -37,7 +38,9 @@ def define(stack):
 	stack.pop(-2)
 	
 def if_statement(stack):
-	if stack.pop(-2) == "True":
+	if stack.pop(-3) == "True":
+		stack.pop(-2)(stack)
+	else:
 		stack.pop()(stack)
 	
 def se(stack):
@@ -66,11 +69,11 @@ class VirtualMachine(object):
 			'*': (mul, ('number', 'number'), ('number',)),
 			'/': (div, ('number', 'number'), ('number',)),
 			
-			'==': (equals, ('x', 'y'), ('string',)),
+			'==': (equals, ('x', 'x'), ('string',)),
 			'>': (ge, ('number', 'number'), ('string',)),
 			'<':(le, ('number', 'number'), ('string',)),
 			
-			'if': (if_statement, ('string', 'block'), ()),
+			'if': (if_statement, ('string', 'block', 'block'), ()),
 			'do': (do, ('block',), ()),
 			'dup': (dup, ('x',), ('x', 'x')),
 			'__string__': (string, ('number',), ('string',)),
@@ -96,35 +99,6 @@ class VirtualMachine(object):
 		code = re.sub(r'\s+',' ',code).strip()
 		code = re.sub(r'"(?:[^"\\]|\\.)*"', self.counter, code)
 		return code.split(' ')
-		
-	# def compile(self, toks):
-	# 	saved_bytecodes = []
-	# 	bytecode = []
-	# 	typecode = []
-	# 	
-	# 	for tok in toks:
-	# 		if tok == '{':
-	# 			saved_bytecodes.append(bytecode)
-	# 			bytecode = Block()
-	# 		elif tok == '}':
-	# 			self.words[bytecode.id] = (bytecode,) + infer(bytecode.bytecode)
-	# 			saved_bytecodes[-1].append(bytecode)
-	# 			bytecode = saved_bytecodes.pop()
-	# 			if isinstance(bytecode, list):
-	# 				typecode.append('block')
-	# 		else:
-	# 			if tok == 'do':
-	# 				typecode.pop()
-	# 				tok = bytecode.pop()
-	# 			elif tok == 'def':
-	# 				name = self.strings[int(bytecode[-3])]
-	# 				block = bytecode[-1]
-	# 				self.words[name] = self.words[block.id]
-	# 
-	# 			if isinstance(bytecode, list):
-	# 				typecheck(tok, typecode)
-	# 			bytecode.append(typify(tok))
-	# 	return bytecode
 	
 	def execute(self, bytecode, stack=[]):
 		for term in bytecode:
@@ -177,7 +151,7 @@ class Compiler(object):
 		for word in self.vm.words:
 			decl = self.vm.words[word]
 			if len(decl) == 1:
-				self.vm.words[word] = decl + infer(decl[0].bytecode)
+				self.vm.words[decl[0].id] = decl + infer(decl[0].bytecode, word)
 				
 	def typecheck(self, toks):
 		typecode = []
@@ -261,14 +235,23 @@ def match_types(expected_types, given_types, tok="block"):
 	
 	return expected_types, given_types, type_vars
 
-def infer(bytecode):
+def infer(bytecode, name=None):
 	inputs = []
 	surplus = []
 	type_vars = {}
 	
-	for tok in bytecode:
-		if vm.words.has_key(tok):
+	for i,tok in enumerate(bytecode):
+		if tok == 'if':
+			if_block = bytecode[i-2]
+			else_block = bytecode[i-1]
+			decl = infer(if_block.bytecode)
+			surplus.pop()
+			surplus.pop()
+			surplus.pop()
+		elif vm.words.has_key(tok):
 			decl = vm.words[tok][1:]
+			if len(decl) == 0:
+				decl = infer(vm.words[tok][0].bytecode)
 		elif block(tok):
 			decl = ((), ('block',))
 		else:
@@ -319,9 +302,12 @@ if __name__ == "__main__":
 	
 	2 power-of-four
 	
-	"equals3" {
-		equals3
-	} def
-	3 equals3
+	"stop-at-1" {
+		1 == 
+			{ "Now at 1" } 
+			{ "Not at 1" }
+		if
+	} def "number -> string" se
+	3 stop-at-1
 	"""
 	main(code)
